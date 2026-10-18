@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 public class Person
 {
     [JsonIgnore]
-    public int PerosnId {get; init;}
+    public int PersonId {get; init;}
 
     public string? Username {get; set;}
 

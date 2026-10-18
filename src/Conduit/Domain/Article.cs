@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 public class Article
 {
     [JsonIgnore]
-    public int AtricleId {get; init;}
+    public int ArticleId {get; init;}
 
     public string? Slug {get; init;}
     public string? Title {get; set;}
