@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 public class ConduitContext(DbContextOptions<ConduitContext> options) : DbContext(options)
 {
+    private IDbContextTransaction? _currentTransaction;
+
     public DbSet<Article> Articles { get; init; } = null!;
     public DbSet<Comment> Comments { get; init; } = null!;
     public DbSet<Person> Persons { get; init; } = null!;
@@ -76,4 +79,63 @@ public class ConduitContext(DbContextOptions<ConduitContext> options) : DbContex
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }
+
+    #region Transaction handling
+    public async Task BeginTransactionAsync(CancellationToken cancellationToken)
+    {
+        if (_currentTransaction != null)
+        {
+            return;
+        }
+        _currentTransaction = await Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
+    }
+
+    public async Task CommitTransactionAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (_currentTransaction != null)
+            {
+                await Database.CommitTransactionAsync(cancellationToken);
+            }
+        }
+        catch
+        {
+            await RollbackTransactionAsync();
+            throw;
+        }
+        finally
+        {
+            if (_currentTransaction != null)
+            {
+                await _currentTransaction.DisposeAsync();
+            }
+            _currentTransaction = null;
+        }
+    }
+
+    public async Task RollbackTransactionAsync()
+    {
+        try
+        {
+            if (_currentTransaction != null)
+            {
+                await _currentTransaction.RollbackAsync();
+            }
+        }
+        finally
+        {
+            if (_currentTransaction != null)
+            {
+                await _currentTransaction.DisposeAsync();
+            }
+            _currentTransaction = null;
+        }
+    }
+    #endregion
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
 }
